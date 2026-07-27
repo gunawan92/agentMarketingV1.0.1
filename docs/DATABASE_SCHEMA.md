@@ -2,7 +2,7 @@
 
 ## Status saat ini
 
-Versi 1 tidak menggunakan database. Pipeline bersifat stateless: request diproses, lalu hasil langsung dikembalikan ke client.
+Wizard API saat ini masih stateless. Arsitektur PostgreSQL yang akan menggantikan model ini tersedia di [Persistent Campaign Wizard Architecture](PERSISTENCE_ARCHITECTURE.md). PostgreSQL akan menjadi source of truth agar campaign dapat di-resume tanpa generate ulang.
 
 ## Rekomendasi saat persistence ditambahkan
 

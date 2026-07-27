@@ -29,6 +29,15 @@ Client
 - Service LLM tidak mengetahui domain campaign; ia hanya menerima system dan user prompt.
 - Controller mengembalikan output per tahap agar mudah diaudit dan di-debug.
 
+## Wizard API
+
+Wizard API bersifat **stateless**. Backend tidak menyimpan draft atau mengirim konten ke platform pihak ketiga. Frontend atau Project Manager menyimpan artefak stage yang telah di-approve dan mengirimnya ke stage berikutnya. Pendekatan ini memberi approval gate yang jelas, menjaga biaya LLM, dan mencegah content calendar dijalankan sekaligus tanpa review.
+
+```text
+strategy -> pilih/approve satu calendar item -> copy -> design
+  -> siapkan asset visual nyata -> publisher / ads -> analytics atau lead trigger -> crm
+```
+
 ## Menambah agent
 
 Tambahkan file prompt di `src/skills/`, kemudian di controller baca prompt tersebut dan kirim output stage sebelumnya sebagai `userPrompt`. Pastikan prompt baru mendefinisikan schema JSON object yang eksplisit.

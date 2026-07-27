@@ -3,7 +3,7 @@
 ## Prasyarat
 
 - Node.js 20 atau lebih baru.
-- Environment variables: `OPENAI_API_KEY`, `OPENAI_MODEL`, `CORS_ORIGIN`, dan `PORT` bila diperlukan.
+- Environment variables: `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `CORS_ORIGIN`, dan `PORT` bila menggunakan OpenRouter.
 - PM2 tersedia global: `npm install -g pm2`.
 
 ## Linux dengan PM2
@@ -12,14 +12,14 @@
 git clone <repository-url> marketing-ai-agent
 cd marketing-ai-agent
 npm ci --omit=dev
-cp .env.example .env
-# edit .env dan isi OPENAI_API_KEY
+cp .env.production.example .env.production
+# edit .env.production dan isi OPENAI_API_KEY
 npm run pm2:start
 pm2 save
 pm2 startup
 ```
 
-`ecosystem.config.js` menggunakan cluster mode dengan jumlah instance sesuai CPU. Untuk melihat log gunakan `pm2 logs marketing-ai-agent`; untuk reload gunakan `npm run pm2:reload`.
+`ecosystem.config.js` menggunakan cluster mode dengan jumlah instance sesuai CPU. `pm2:start` memakai `env_production`, sehingga aplikasi memuat `.env.production`; `pm2:dev` memakai `env_development` dan memuat `.env.development`. Untuk melihat log gunakan `pm2 logs marketing-ai-agent`; untuk reload production gunakan `npm run pm2:reload`.
 
 ## Reverse proxy
 
@@ -31,7 +31,19 @@ Letakkan Nginx atau reverse proxy setara di depan Node.js untuk TLS, domain, dan
 | --- | --- | --- |
 | `OPENAI_API_KEY` | Ya | API key provider. |
 | `OPENAI_MODEL` | Tidak | Default `gpt-4o-mini`. |
+| `OPENROUTER_API_KEY` | Untuk OpenRouter | API key OpenRouter; diprioritaskan saat tersedia. |
+| `OPENROUTER_MODEL` | Untuk OpenRouter | Model slug OpenRouter; diprioritaskan atas `OPENAI_MODEL`. |
 | `OPENAI_BASE_URL` | Tidak | Base URL provider compatible. |
 | `AI_TIMEOUT_MS` | Tidak | Default `30000`. |
 | `CORS_ORIGIN` | Produksi | Daftar origin dipisah koma. |
 | `PORT` | Tidak | Default `3000`. |
+
+## Development dengan OpenRouter
+
+Salin `.env.development.example` menjadi `.env.development`, isi `OPENROUTER_API_KEY` dengan key OpenRouter, lalu jalankan `npm run dev`. Aplikasi menggunakan OpenAI SDK yang diarahkan ke `https://openrouter.ai/api/v1`; atur `OPENROUTER_MODEL` (default development: `openrouter/free`). File `.env.development` diabaikan Git.
+
+Jika OpenRouter merespons `No endpoints available matching your guardrail restrictions and data policy`, buka Settings > Privacy pada akun OpenRouter. Kebijakan data, Zero Data Retention, serta model/provider allowlist dapat mengeluarkan seluruh endpoint yang tersedia untuk `openrouter/free`. Longgarkan restriction untuk development atau pilih model yang diizinkan oleh kebijakan tersebut.
+
+## PostgreSQL local
+
+Set `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, dan `PGPASSWORD` di `.env.development`. Bila database target belum ada, jalankan `npm run db:create`, lalu jalankan `npm run db:migrate`. Migration membuat tabel aplikasi di schema `marketing_ai`.
