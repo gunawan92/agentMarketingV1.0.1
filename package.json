@@ -7,6 +7,10 @@
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
+    "start:production": "node src/server.js",
+    "db:create": "node scripts/create-database.js",
+    "db:migrate": "node scripts/migrate.js",
+    "pm2:dev": "pm2 start ecosystem.config.js --env development",
     "pm2:start": "pm2 start ecosystem.config.js --env production",
     "pm2:reload": "pm2 reload ecosystem.config.js --env production"
   },
@@ -17,6 +21,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^4.21.2",
-    "openai": "^4.104.0"
+    "openai": "^4.104.0",
+    "pg": "^8.13.1"
   }
 }

@@ -1,6 +1,7 @@
 const path = require('path');
 const fs = require('fs/promises');
 const { generateJson } = require('../services/ai.service');
+const logger = require('../services/logger.service');
 
 const skillsDirectory = path.join(__dirname, '..', 'skills');
 
@@ -13,7 +14,9 @@ async function loadSkill(fileName) {
   }
 
   try {
-    return await fs.readFile(path.join(skillsDirectory, safeFileName), 'utf8');
+    const skill = await fs.readFile(path.join(skillsDirectory, safeFileName), 'utf8');
+    logger.info('pipeline.skill.loaded', { skill: safeFileName, characters: skill.length });
+    return skill;
   } catch (cause) {
     const error = new Error(`Unable to load skill: ${safeFileName}`);
     error.statusCode = 500;
@@ -31,10 +34,17 @@ async function generateCampaign(req, res, next) {
       throw error;
     }
 
+    logger.info('pipeline.started', {
+      requestId: req.requestId,
+      contextFields: Object.keys(context),
+      briefLength: campaignBrief.trim().length
+    });
+
     const strategyPrompt = await loadSkill('agent-strategy.md');
     const strategy = await generateJson({
       systemPrompt: strategyPrompt,
-      userPrompt: JSON.stringify({ campaignBrief: campaignBrief.trim(), context })
+      userPrompt: JSON.stringify({ campaignBrief: campaignBrief.trim(), context }),
+      stage: 'strategy'
     });
 
     const copywriterPrompt = await loadSkill('agent-copywriter.md');
@@ -43,11 +53,23 @@ async function generateCampaign(req, res, next) {
       userPrompt: JSON.stringify({
         originalRequest: { campaignBrief: campaignBrief.trim(), context },
         strategy
-      })
+      }),
+      stage: 'copywriter'
+    });
+
+    logger.info('pipeline.completed', {
+      requestId: req.requestId,
+      strategyKeys: Object.keys(strategy),
+      copyKeys: Object.keys(copy)
     });
 
     return res.status(200).json({ strategy, copy });
   } catch (error) {
+    logger.error('pipeline.failed', {
+      requestId: req.requestId,
+      errorName: error.name,
+      errorMessage: error.message
+    });
     return next(error);
   }
 }
