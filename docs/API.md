@@ -1,12 +1,8 @@
 # API Reference
 
-Base URL lokal: `http://localhost:3000`
-
-## Health check
+## Health
 
 `GET /health`
-
-Respons `200`:
 
 ```json
 { "status": "ok" }
@@ -16,33 +12,77 @@ Respons `200`:
 
 `POST /api/generate-campaign`
 
-Header: `Content-Type: application/json`
+Menjalankan Strategy → Copywriter → Design → Publisher Draft → Ads Draft → CRM Initial Plan secara berurutan. `campaignBrief` wajib berupa string 20–20000 karakter. Field lain bersifat optional untuk backward compatibility.
 
-Request minimal:
-
-```json
-{
-  "campaignBrief": "Promosikan aplikasi kasir untuk UMKM kuliner di Indonesia."
-}
-```
-
-Field tambahan diteruskan sebagai `context`, misalnya `language`, `product`, `budget`, `channels`, atau `brandVoice`.
-
-Respons `200`:
+Request minimum:
 
 ```json
 {
-  "strategy": { "campaign_goal": "...", "key_messages": ["..."] },
-  "copy": { "headline_options": ["..."], "primary_copy": "..." }
+  "campaignBrief": "Promosikan STELA kepada yayasan dan kepala sekolah di Indonesia."
 }
 ```
 
-Error umum:
+Untuk melewati Ads Agent:
 
-| Status | Arti |
-| --- | --- |
-| 400 | `campaignBrief` kosong atau bukan string. |
-| 404 | Route tidak tersedia. |
-| 500 | Konfigurasi server atau skill file bermasalah. |
-| 502 | Provider LLM gagal atau memberi JSON tidak valid. |
-| 504 | Request LLM melebihi `AI_TIMEOUT_MS`. |
+```json
+{
+  "campaignBrief": "Promosikan STELA kepada yayasan dan kepala sekolah di Indonesia.",
+  "ads": { "enabled": false }
+}
+```
+
+Response sukses (diringkas):
+
+```json
+{
+  "success": true,
+  "data": {
+    "pipeline_id": "uuid",
+    "status": "completed",
+    "campaign_request": {},
+    "results": {
+      "strategy": {},
+      "copywriting": {},
+      "design": { "asset_generation_status": "not_generated" },
+      "publishing": { "status": "requires_asset" },
+      "ads": { "status": "draft", "asset_status": "pending" },
+      "crm": { "evaluation_status": "awaiting_data" }
+    },
+    "execution": {
+      "started_at": "2026-07-27T00:00:00.000Z",
+      "completed_at": "2026-07-27T00:00:10.000Z",
+      "duration_ms": 10000,
+      "agents": [
+        {
+          "agent": "strategy",
+          "status": "completed",
+          "duration_ms": 1200,
+          "model": "gpt-4o-mini",
+          "response_id": "response-id-or-null"
+        }
+      ]
+    }
+  }
+}
+```
+
+Jika Ads dinonaktifkan, hasil dan trace Ads berstatus `skipped`. Bila budget Ads tidak tersedia tetapi Ads aktif, agent tetap dijalankan dan status hasil dinormalisasi menjadi `requires_budget`.
+
+Response kegagalan stage:
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "PIPELINE_STAGE_FAILED",
+    "message": "Pipeline failed at design stage.",
+    "pipeline_id": "uuid",
+    "stage": "design",
+    "details": null
+  }
+}
+```
+
+Pipeline berhenti saat stage wajib gagal. Raw response OpenAI dan system prompt tidak ditampilkan dalam production.
+
+Semua hasil merupakan draft JSON. Design tidak menghasilkan file, Publisher tidak menerbitkan konten, Ads tidak mengaktifkan campaign, dan CRM tidak mengirim follow-up.
