@@ -1,18 +1,22 @@
+<<<<<<< HEAD
 const path = require('path');
 const fs = require('fs/promises');
 const { generateJson } = require('../services/ai.service');
 const logger = require('../services/logger.service');
+=======
+const { generateCampaignPipeline } = require('../services/pipeline.service');
+const AppError = require('../utils/app-error');
+>>>>>>> 94a9071b743c6db25f8fd911589bff10ba051f7c
 
-const skillsDirectory = path.join(__dirname, '..', 'skills');
-
-async function loadSkill(fileName) {
-  const safeFileName = path.basename(fileName);
-  if (safeFileName !== fileName || !safeFileName.endsWith('.md')) {
-    const error = new Error('Invalid skill file name.');
-    error.statusCode = 500;
-    throw error;
+function validateCampaignRequest(body) {
+  if (!body || typeof body.campaignBrief !== 'string') {
+    throw new AppError('campaignBrief is required and must be a string.', {
+      code: 'VALIDATION_ERROR',
+      statusCode: 400
+    });
   }
 
+<<<<<<< HEAD
   try {
     const skill = await fs.readFile(path.join(skillsDirectory, safeFileName), 'utf8');
     logger.info('pipeline.skill.loaded', { skill: safeFileName, characters: skill.length });
@@ -22,11 +26,22 @@ async function loadSkill(fileName) {
     error.statusCode = 500;
     error.details = cause.message;
     throw error;
+=======
+  const campaignBrief = body.campaignBrief.trim();
+  if (campaignBrief.length < 20 || campaignBrief.length > 20000) {
+    throw new AppError('campaignBrief must contain between 20 and 20000 characters.', {
+      code: 'VALIDATION_ERROR',
+      statusCode: 400
+    });
+>>>>>>> 94a9071b743c6db25f8fd911589bff10ba051f7c
   }
+
+  return { ...body, campaignBrief };
 }
 
 async function generateCampaign(req, res, next) {
   try {
+<<<<<<< HEAD
     const { campaignBrief, ...context } = req.body || {};
     if (typeof campaignBrief !== 'string' || !campaignBrief.trim()) {
       const error = new Error('campaignBrief is required and must be a non-empty string.');
@@ -64,6 +79,11 @@ async function generateCampaign(req, res, next) {
     });
 
     return res.status(200).json({ strategy, copy });
+=======
+    const input = validateCampaignRequest(req.body);
+    const data = await generateCampaignPipeline(input);
+    return res.status(200).json({ success: true, data });
+>>>>>>> 94a9071b743c6db25f8fd911589bff10ba051f7c
   } catch (error) {
     logger.error('pipeline.failed', {
       requestId: req.requestId,
@@ -74,4 +94,4 @@ async function generateCampaign(req, res, next) {
   }
 }
 
-module.exports = { generateCampaign, loadSkill };
+module.exports = { generateCampaign };

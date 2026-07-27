@@ -76,6 +76,7 @@ app.use((req, res) => {
 });
 
 app.use((err, _req, res, _next) => {
+<<<<<<< HEAD
   logger.error('http.request.failed', {
     requestId: _req.requestId,
     method: _req.method,
@@ -83,10 +84,39 @@ app.use((err, _req, res, _next) => {
     statusCode: err.statusCode || 500,
     error: err
   });
+=======
+  if (process.env.NODE_ENV === 'production') {
+    console.error({
+      code: err.code || 'INTERNAL_ERROR',
+      message: err.message || 'Internal server error',
+      stage: err.stage,
+      pipeline_id: err.pipelineId
+    });
+  } else {
+    console.error(err);
+  }
+>>>>>>> 94a9071b743c6db25f8fd911589bff10ba051f7c
   const statusCode = err.statusCode || 500;
-  res.status(statusCode).json({
-    error: err.message || 'Internal server error',
-    ...(process.env.NODE_ENV !== 'production' && err.details ? { details: err.details } : {})
+  if (err.code === 'PIPELINE_STAGE_FAILED') {
+    return res.status(statusCode).json({
+      success: false,
+      error: {
+        code: err.code,
+        message: `Pipeline failed at ${err.stage} stage.`,
+        pipeline_id: err.pipelineId,
+        stage: err.stage,
+        details: process.env.NODE_ENV === 'production' ? null : (err.details || null)
+      }
+    });
+  }
+
+  return res.status(statusCode).json({
+    success: false,
+    error: {
+      code: err.code || 'INTERNAL_ERROR',
+      message: err.message || 'Internal server error',
+      details: process.env.NODE_ENV === 'production' ? null : (err.details || null)
+    }
   });
 });
 
