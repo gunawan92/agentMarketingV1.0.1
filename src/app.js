@@ -11,11 +11,11 @@ const app = express();
 
 const allowedOrigins = (process.env.CORS_ORIGIN || '')
   .split(',')
-  .map((origin) => origin.trim())
+  .map((origin) => origin.trim().replace(/\/+$/, ''))
   .filter(Boolean);
 
 function isAllowedOrigin(origin) {
-  if (!origin || allowedOrigins.includes('*') || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+  if (!origin || allowedOrigins.includes('*') || allowedOrigins.length === 0 || allowedOrigins.includes(origin.replace(/\/+$/, ''))) {
     return true;
   }
 
@@ -38,10 +38,13 @@ app.use(cors({
       return callback(null, true);
     }
     logger.warn('cors.origin.rejected', { origin, allowedOrigins });
-    return callback(new Error('Origin is not allowed by CORS'));
+    const error = new Error('Origin is not allowed by CORS');
+    error.statusCode = 403;
+    return callback(error);
   },
   methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id'],
+  exposedHeaders: ['X-Request-Id']
 }));
 app.use(express.json({ limit: '1mb' }));
 app.use('/storage', express.static(path.join(process.cwd(), 'storage')));

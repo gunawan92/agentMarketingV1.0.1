@@ -7,7 +7,7 @@ Express.js backend for a multi-agent marketing campaign workflow. It supports a 
 ```bash
 npm install
 copy .env.development.example .env.development
-# Configure a valid OpenRouter key in .env.development
+# Configure a valid OpenRouter key in .env.development. The application does not load `.env`.
 npm run db:create
 npm run db:migrate
 npm run dev

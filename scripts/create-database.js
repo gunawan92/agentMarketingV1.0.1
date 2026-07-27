@@ -1,13 +1,8 @@
-const fs = require('fs');
-const path = require('path');
-const dotenv = require('dotenv');
 const { Client } = require('pg');
 const logger = require('../src/services/logger.service');
+const { loadEnvironment } = require('../src/config/environment');
 
-dotenv.config({ path: path.join(process.cwd(), '.env') });
-const environment = process.env.NODE_ENV || 'development';
-const environmentFile = path.join(process.cwd(), `.env.${environment}`);
-if (fs.existsSync(environmentFile)) dotenv.config({ path: environmentFile, override: true });
+loadEnvironment();
 
 function quoteIdentifier(value) {
   return `"${value.replaceAll('"', '""')}"`;

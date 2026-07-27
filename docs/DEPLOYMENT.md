@@ -19,7 +19,7 @@ pm2 save
 pm2 startup
 ```
 
-`ecosystem.config.js` menggunakan cluster mode dengan jumlah instance sesuai CPU. `pm2:start` memakai `env_production`, sehingga aplikasi memuat `.env.production`; `pm2:dev` memakai `env_development` dan memuat `.env.development`. Untuk melihat log gunakan `pm2 logs marketing-ai-agent`; untuk reload production gunakan `npm run pm2:reload`.
+`ecosystem.config.js` menggunakan cluster mode dengan jumlah instance sesuai CPU. `pm2:start` memakai `env_production`, sehingga aplikasi memuat **hanya** `.env.production`; `pm2:dev` memakai `env_development` dan memuat **hanya** `.env.development`. File `.env` tidak digunakan oleh aplikasi. Untuk melihat log gunakan `pm2 logs marketing-ai-agent`; untuk reload production gunakan `npm run pm2:reload`.
 
 ## Reverse proxy
 

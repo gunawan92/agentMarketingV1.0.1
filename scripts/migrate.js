@@ -1,11 +1,6 @@
-const fs = require('fs');
-const path = require('path');
-const dotenv = require('dotenv');
+const { loadEnvironment } = require('../src/config/environment');
 
-dotenv.config({ path: path.join(process.cwd(), '.env') });
-const environment = process.env.NODE_ENV || 'development';
-const environmentFile = path.join(process.cwd(), `.env.${environment}`);
-if (fs.existsSync(environmentFile)) dotenv.config({ path: environmentFile, override: true });
+loadEnvironment();
 
 const { query, closePool } = require('../src/services/db.service');
 const logger = require('../src/services/logger.service');

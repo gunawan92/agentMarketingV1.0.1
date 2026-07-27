@@ -1,15 +1,9 @@
-const fs = require('fs');
-const path = require('path');
-const dotenv = require('dotenv');
 const logger = require('./services/logger.service');
+const path = require('path');
+const { loadEnvironment } = require('./config/environment');
 
-// Load shared values first, then override them with the active environment file.
-dotenv.config({ path: path.join(process.cwd(), '.env') });
-const environment = process.env.NODE_ENV || 'development';
-const environmentFile = path.join(process.cwd(), `.env.${environment}`);
-if (fs.existsSync(environmentFile)) {
-  dotenv.config({ path: environmentFile, override: true });
-}
+const environmentConfig = loadEnvironment();
+const { environment, environmentFile } = environmentConfig;
 
 const app = require('./app');
 const { getModel, getApiKeyStatus } = require('./services/ai.service');
@@ -18,7 +12,7 @@ const { closePool } = require('./services/db.service');
 const port = Number(process.env.PORT) || 3000;
 logger.info('server.configuration.loaded', {
   environment,
-  environmentFile: fs.existsSync(environmentFile) ? path.basename(environmentFile) : null,
+  environmentFile: environmentConfig.exists ? path.basename(environmentFile) : null,
   port,
   model: getModel(),
   apiKeyStatus: getApiKeyStatus(),
