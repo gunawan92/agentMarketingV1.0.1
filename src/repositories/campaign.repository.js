@@ -92,4 +92,15 @@ async function createApproval({ campaignId, stageRunId, decision, selectedConten
   return result.rows[0];
 }
 
-module.exports = { createCampaign, getCampaign, getCampaignDetail, getStageRun, createStageRun, completeStageRun, failStageRun, createApproval };
+async function createAsset({ campaignId, stageRunId, assetType, storageUrl, mimeType, metadata }) {
+  const id = randomUUID();
+  const result = await query(
+    `INSERT INTO marketing_ai.campaign_assets
+      (id, campaign_id, stage_run_id, asset_type, storage_url, mime_type, metadata)
+     VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb) RETURNING *`,
+    [id, campaignId, stageRunId || null, assetType, storageUrl, mimeType || null, JSON.stringify(metadata || {})]
+  );
+  return result.rows[0];
+}
+
+module.exports = { createCampaign, getCampaign, getCampaignDetail, getStageRun, createStageRun, completeStageRun, failStageRun, createApproval, createAsset };

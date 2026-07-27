@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const { randomUUID } = require('crypto');
+const path = require('path');
 const pipelineRoutes = require('./routes/pipeline.routes');
 const wizardRoutes = require('./routes/wizard.routes');
 const campaignRoutes = require('./routes/campaign.routes');
@@ -43,6 +44,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json({ limit: '1mb' }));
+app.use('/storage', express.static(path.join(process.cwd(), 'storage')));
 app.use((req, res, next) => {
   const requestId = req.headers['x-request-id'] || randomUUID();
   req.requestId = requestId;
@@ -76,6 +78,9 @@ app.use((req, res) => {
 });
 
 app.use((err, _req, res, _next) => {
+  if (err.name === 'MulterError') {
+    err.statusCode = 400;
+  }
   logger.error('http.request.failed', {
     requestId: _req.requestId,
     method: _req.method,

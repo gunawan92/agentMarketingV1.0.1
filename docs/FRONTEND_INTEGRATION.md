@@ -55,10 +55,31 @@ Gunakan Persistent Campaign API, bukan endpoint stateless `/api/wizard/*`, agar 
 | Membuat campaign | `marketing_ai.campaigns`: brief, status, current stage. |
 | Menjalankan Strategy/Copy/Design/Ads/CRM | `marketing_ai.campaign_stages`: input, output, error, model, prompt checksum, attempt. |
 | PM approve/reject | `marketing_ai.campaign_approvals`: keputusan, catatan, selected calendar item. |
-| Upload asset melalui Asset API (akan ditambahkan) | `marketing_ai.campaign_assets`: URL file dan metadata. |
+| Upload atau attach image asset | `marketing_ai.campaign_assets`: URL file dan metadata. |
 | Menyiapkan publish | `marketing_ai.publication_jobs`: payload dan status delivery. |
 
 FE harus menyimpan `campaignId` pada local state dan URL route, misalnya `/campaigns/:campaignId`. Saat browser refresh, panggil `GET /api/campaigns/:campaignId`; jangan generate ulang stage yang telah sukses.
+
+### Upload visual asset (wajib sebelum Publisher/Ads)
+
+Jangan isi URL landing page pada field gambar. Upload file gambar ke backend:
+
+```js
+const formData = new FormData();
+formData.append('asset', selectedFile); // PNG, JPEG, WebP, GIF, atau AVIF; max 10 MB
+formData.append('stageRunId', campaignWizard.designStageRunId);
+formData.append('altText', 'French Khimar Premium');
+
+const response = await fetch(`${API_BASE_URL}/api/campaigns/${campaignWizard.campaignId}/assets`, {
+  method: 'POST',
+  headers: { 'X-Request-Id': crypto.randomUUID() },
+  body: formData
+});
+const { asset } = await response.json();
+campaignWizard.visualAsset = { path: asset.storage_url, altText: asset.metadata.altText };
+```
+
+Response `asset.storage_url` adalah URL gambar yang dapat dipakai langsung untuk `<img src="...">`, Publisher, dan Ads. Untuk external CDN URL gunakan `POST /api/campaigns/:campaignId/assets/link`; URL harus langsung menuju file gambar seperti `.png` atau `.webp`, bukan halaman produk/landing page.
 
 Contoh membuat campaign:
 
@@ -163,7 +184,7 @@ UI: render `strategy.content_calendar` sebagai list/table. Saat user memilih sat
     "date": "Day 1",
     "main_angle": "Perkenalan produk sebagai solusi energi.",
     "format": "Image",
-    "call_to_action": "Follow untuk info lebih lanjut",
+    "cta_direction": "Follow untuk info lebih lanjut",
     "rationale": "Membangun awareness awal."
   },
   "platform": "Instagram Feed",
@@ -172,7 +193,7 @@ UI: render `strategy.content_calendar` sebagai list/table. Saat user memilih sat
 }
 ```
 
-`selectedContentItem.main_angle`, `format`, dan `call_to_action` wajib ada. Respons sukses mengembalikan `{ "stage": "copywriter", "copy": { ... } }`.
+`selectedContentItem.main_angle` dan `format` wajib ada. CTA dapat dikirim dengan field Strategy terbaru `cta_direction` (direkomendasikan) atau field lama `call_to_action`; backend menormalkan keduanya. Respons sukses mengembalikan `{ "stage": "copywriter", "copy": { ... } }`.
 
 ## 3. Design
 

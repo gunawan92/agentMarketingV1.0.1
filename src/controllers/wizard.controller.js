@@ -18,6 +18,17 @@ function requireObject(value, field) {
   return value;
 }
 
+function normalizeSelectedContentItem(value) {
+  const item = requireObject(value, 'selectedContentItem');
+  // Strategy v1 returns `cta_direction`; the earlier wizard contract used
+  // `call_to_action`. Accept both, then pass one stable field downstream.
+  const callToAction = item.call_to_action ?? item.cta_direction;
+  return {
+    ...item,
+    call_to_action: requireString(callToAction, 'selectedContentItem.call_to_action or selectedContentItem.cta_direction')
+  };
+}
+
 async function runStage({ requestId, stage, skillFile, input }) {
   logger.info('wizard.stage.started', { requestId, stage, inputFields: Object.keys(input) });
   const systemPrompt = await loadSkill(skillFile);
@@ -46,10 +57,9 @@ async function strategy(req, res, next) {
 async function copy(req, res, next) {
   try {
     const { campaignBrief, strategy: strategyOutput, selectedContentItem, platform, toneOfVoice, language, ...context } = req.body || {};
-    const selectedItem = requireObject(selectedContentItem, 'selectedContentItem');
+    const selectedItem = normalizeSelectedContentItem(selectedContentItem);
     requireString(selectedItem.main_angle, 'selectedContentItem.main_angle');
     requireString(selectedItem.format, 'selectedContentItem.format');
-    requireString(selectedItem.call_to_action, 'selectedContentItem.call_to_action');
     const input = {
       campaignBrief: requireString(campaignBrief, 'campaignBrief'),
       strategy: requireObject(strategyOutput, 'strategy'),

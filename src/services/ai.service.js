@@ -92,9 +92,10 @@ async function runJsonAgent({ agentName, systemPrompt, userPrompt, metadata = {}
 
   const model = getModel();
   const timeout = getPositiveInteger(process.env.AI_TIMEOUT_MS, 60000);
+  const maxTokens = getPositiveInteger(process.env.AI_MAX_TOKENS, 4096);
   const prompt = typeof userPrompt === 'string' ? userPrompt : JSON.stringify(userPrompt);
   const startedAt = Date.now();
-  logger.info('ai.request.started', { stage: agentName, model, timeout });
+  logger.info('ai.request.started', { stage: agentName, model, timeout, maxTokens });
 
   let completion;
   try {
@@ -102,7 +103,10 @@ async function runJsonAgent({ agentName, systemPrompt, userPrompt, metadata = {}
       model,
       messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }],
       response_format: { type: 'json_object' },
-      temperature: 0.3
+      temperature: 0.3,
+      // A free OpenRouter route can select a reasoning model. Leave enough
+      // completion budget for the actual JSON after internal reasoning.
+      max_tokens: maxTokens
     }, { timeout });
   } catch (error) {
     logger.error('ai.request.failed', { stage: agentName, durationMs: Date.now() - startedAt, errorName: error.name, errorMessage: error.message });

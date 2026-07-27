@@ -20,6 +20,11 @@ function requireObject(value, field) {
   return value;
 }
 
+async function assertCampaignAndStage(campaignId, stageRunId) {
+  if (!await repository.getCampaign(campaignId)) throw notFound('Campaign not found.');
+  if (stageRunId && !await repository.getStageRun(stageRunId, campaignId)) throw notFound('Stage run not found for this campaign.');
+}
+
 async function create(req, res, next) {
   try {
     const { brief, createdBy } = req.body || {};
@@ -83,4 +88,44 @@ async function approve(req, res, next) {
   } catch (error) { return next(error); }
 }
 
-module.exports = { create, detail, runStage, approve };
+async function uploadAsset(req, res, next) {
+  try {
+    const { campaignId } = req.params;
+    const { stageRunId, altText, assetType = 'social_image' } = req.body || {};
+    if (!req.file) throw badRequest('asset file is required.');
+    await assertCampaignAndStage(campaignId, stageRunId);
+    const storageUrl = `${req.protocol}://${req.get('host')}/storage/campaign-assets/${req.file.filename}`;
+    const asset = await repository.createAsset({
+      campaignId,
+      stageRunId,
+      assetType,
+      storageUrl,
+      mimeType: req.file.mimetype,
+      metadata: { originalName: req.file.originalname, size: req.file.size, altText: altText || '' }
+    });
+    logger.info('campaign.asset.uploaded', { campaignId, assetId: asset.id, stageRunId, mimeType: req.file.mimetype, size: req.file.size });
+    return res.status(201).json({ asset });
+  } catch (error) { return next(error); }
+}
+
+async function attachAssetUrl(req, res, next) {
+  try {
+    const { campaignId } = req.params;
+    const { stageRunId, storageUrl, altText, assetType = 'social_image' } = req.body || {};
+    if (typeof storageUrl !== 'string' || !storageUrl.trim()) throw badRequest('storageUrl is required.');
+    let parsedUrl;
+    try { parsedUrl = new URL(storageUrl); } catch (_error) { throw badRequest('storageUrl must be a valid URL.'); }
+    if (!/^https?:$/.test(parsedUrl.protocol) || !/\.(png|jpe?g|webp|gif|avif)$/i.test(parsedUrl.pathname)) {
+      throw badRequest('storageUrl must point directly to an image file (PNG, JPEG, WebP, GIF, or AVIF), not a landing page.');
+    }
+    await assertCampaignAndStage(campaignId, stageRunId);
+    const asset = await repository.createAsset({
+      campaignId, stageRunId, assetType, storageUrl: parsedUrl.toString(),
+      metadata: { altText: altText || '', source: 'external_url' }
+    });
+    logger.info('campaign.asset.url_attached', { campaignId, assetId: asset.id, stageRunId });
+    return res.status(201).json({ asset });
+  } catch (error) { return next(error); }
+}
+
+module.exports = { create, detail, runStage, approve, uploadAsset, attachAssetUrl };

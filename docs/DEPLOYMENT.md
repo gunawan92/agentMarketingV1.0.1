@@ -13,7 +13,7 @@ git clone <repository-url> marketing-ai-agent
 cd marketing-ai-agent
 npm ci --omit=dev
 cp .env.production.example .env.production
-# edit .env.production dan isi OPENAI_API_KEY
+# edit .env.production dan isi OpenRouter/OpenAI key serta DATABASE_URL
 npm run pm2:start
 pm2 save
 pm2 startup
@@ -33,8 +33,11 @@ Letakkan Nginx atau reverse proxy setara di depan Node.js untuk TLS, domain, dan
 | `OPENAI_MODEL` | Tidak | Default `gpt-4o-mini`. |
 | `OPENROUTER_API_KEY` | Untuk OpenRouter | API key OpenRouter; diprioritaskan saat tersedia. |
 | `OPENROUTER_MODEL` | Untuk OpenRouter | Model slug OpenRouter; diprioritaskan atas `OPENAI_MODEL`. |
+| `AI_MAX_TOKENS` | Tidak | Batas token respons; gunakan `4096` untuk router free yang dapat memilih reasoning model. |
 | `OPENAI_BASE_URL` | Tidak | Base URL provider compatible. |
 | `AI_TIMEOUT_MS` | Tidak | Default `30000`. |
+| `DATABASE_URL` | Produksi | URI PostgreSQL tunggal; gunakan URI Neon dengan `?sslmode=require`. |
+| `PGPOOL_MAX` | Tidak | Maksimum koneksi PostgreSQL per process PM2, default `5`. |
 | `CORS_ORIGIN` | Produksi | Daftar origin dipisah koma. |
 | `PORT` | Tidak | Default `3000`. |
 
@@ -47,3 +50,14 @@ Jika OpenRouter merespons `No endpoints available matching your guardrail restri
 ## PostgreSQL local
 
 Set `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, dan `PGPASSWORD` di `.env.development`. Bila database target belum ada, jalankan `npm run db:create`, lalu jalankan `npm run db:migrate`. Migration membuat tabel aplikasi di schema `marketing_ai`.
+
+## PostgreSQL Neon (production)
+
+Set **satu** variable di `.env.production`, tanpa tanda kutip dan tanpa baris terpisah:
+
+```dotenv
+DATABASE_URL=postgresql://user:password@host/database?sslmode=require
+PGPOOL_MAX=5
+```
+
+`DATABASE_URL` diprioritaskan atas seluruh `PGHOST`/`PGDATABASE` fallback. Jalankan `NODE_ENV=production npm run db:migrate` sekali sebelum start PM2. Jangan gunakan kredensial PostgreSQL yang sudah pernah ditempel ke chat atau commit; rotate dahulu di dashboard provider.
