@@ -3,7 +3,7 @@ module.exports = {
     {
       name: 'marketing-ai-agent',
       script: './src/server.js',
-      instances: 'max',
+      instances: 2,
       exec_mode: 'cluster',
       autorestart: true,
       watch: false,
@@ -18,7 +18,7 @@ module.exports = {
       },
       env_production: {
         NODE_ENV: 'production',
-        PORT: 3000
+        PORT: 3010
       }
     }
   ]

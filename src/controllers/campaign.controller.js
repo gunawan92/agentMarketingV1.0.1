@@ -20,6 +20,18 @@ function requireObject(value, field) {
   return value;
 }
 
+function startJsonHeartbeat(res) {
+  res.status(200);
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
+  const timer = setInterval(() => {
+    if (!res.destroyed && !res.writableEnded) res.write(' ');
+  }, 10000);
+  timer.unref();
+  return () => clearInterval(timer);
+}
+
 async function assertCampaignAndStage(campaignId, stageRunId) {
   if (!await repository.getCampaign(campaignId)) throw notFound('Campaign not found.');
   if (stageRunId && !await repository.getStageRun(stageRunId, campaignId)) throw notFound('Stage run not found for this campaign.');
@@ -45,6 +57,7 @@ async function detail(req, res, next) {
 
 async function runStage(req, res, next) {
   let stageRun;
+  let stopHeartbeat;
   try {
     const { campaignId, stage } = req.params;
     const skillFile = stages[stage];
@@ -63,13 +76,25 @@ async function runStage(req, res, next) {
       promptChecksum
     });
     logger.info('campaign.stage.started', { campaignId, stage, stageRunId: stageRun.id, attempt: stageRun.attempt, requestId: req.requestId });
+    // Free AI routes can take several minutes. Send JSON-safe whitespace so
+    // browsers and reverse proxies do not close an otherwise idle connection.
+    stopHeartbeat = startJsonHeartbeat(res);
     const output = await generateJson({ systemPrompt, userPrompt: JSON.stringify(input), stage });
     const completed = await repository.completeStageRun(stageRun.id, output);
     logger.info('campaign.stage.completed', { campaignId, stage, stageRunId: completed.id, attempt: completed.attempt });
-    return res.status(200).json({ campaignId, stageRun: completed, output });
+    stopHeartbeat();
+    return res.end(JSON.stringify({ campaignId, stageRun: completed, output }));
   } catch (error) {
+    if (stopHeartbeat) stopHeartbeat();
     if (stageRun) await repository.failStageRun(stageRun.id, { name: error.name, message: error.message });
     logger.error('campaign.stage.failed', { campaignId: req.params.campaignId, stage: req.params.stage, stageRunId: stageRun?.id, error });
+    if (res.headersSent) {
+      return res.end(JSON.stringify({
+        success: false,
+        error: error.message || 'Internal server error',
+        code: error.code || 'INTERNAL_ERROR'
+      }));
+    }
     return next(error);
   }
 }
